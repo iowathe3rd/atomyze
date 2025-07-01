@@ -1,0 +1,42 @@
+name: Dependabot
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  dependabot:
+    runs-on: ubuntu-latest
+    if: ${{ github.actor == 'dependabot[bot]' }}
+    steps:
+    - name: Fetch metadata
+      id: metadata
+      uses: dependabot/fetch-metadata@v1
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Request review
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const updateType = '${{ steps.metadata.outputs.update-type }}';
+          const packageName = '${{ steps.metadata.outputs.dependency-names }}';
+          
+          let priority = 'patch';
+          if (updateType === 'version-update:semver-minor') priority = 'minor';
+          if (updateType === 'version-update:semver-major') priority = 'major';
+          
+          await github.rest.pulls.requestReviewers({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            pull_number: context.issue.number,
+            reviewers: ['iowathe3rd']
+          });
+          
+          await github.rest.issues.addLabels({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+            labels: ['dependencies', `${priority}-update`]
+          });

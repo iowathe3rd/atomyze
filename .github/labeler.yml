@@ -1,0 +1,37 @@
+# Label configuration for pull requests
+# This file is used by the GitHub Labeler action
+
+documentation:
+  - '**/*.md'
+  - 'docs/**/*'
+
+dependencies:
+  - 'package*.json'
+  - 'yarn.lock'
+
+ci:
+  - '.github/**/*'
+
+tests:
+  - '**/*.test.*'
+  - '**/*.spec.*'
+  - 'test/**/*'
+
+core:
+  - 'src/core/**/*'
+
+generators:
+  - 'src/generators/**/*'
+
+types:
+  - 'src/types/**/*'
+
+demo:
+  - 'index.html'
+  - 'public/**/*'
+
+build:
+  - 'vite.config.*'
+  - 'tsconfig.*'
+  - '.eslintrc.*'
+  - '.prettierrc.*'

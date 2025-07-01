@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Particle Weaver - Interactive Demo</title>
+    <link rel="icon" type="image/x-icon" href="/public/favicon.ico">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%);
+            color: #ffffff;
+            overflow: hidden;
+            height: 100vh;
+        }
+        
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            cursor: grab;
+        }
+        
+        #canvas-container:active {
+            cursor: grabbing;
+        }
+        
+        .controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 25px;
+            border-radius: 15px;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(76, 195, 247, 0.3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            min-width: 280px;
+            max-height: 80vh;
+            overflow-y: auto;
+            transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+        }
+        
+        .controls.hidden {
+            transform: translateX(-100%);
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .toggle-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 101;
+            background: rgba(76, 195, 247, 0.9);
+            color: #000;
+            border: none;
+            padding: 12px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(76, 195, 247, 0.3);
+            transition: all 0.3s ease;
+            width: 45px;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
+        }
+        
+        .toggle-panel:hover {
+            background: rgba(76, 195, 247, 1);
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(76, 195, 247, 0.5);
+        }
+        
+        .toggle-panel.panel-visible {
+            left: 320px;
+            transition: left 0.3s ease-in-out, all 0.3s ease;
+        }
+        
+        .controls::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .controls::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+        
+        .controls::-webkit-scrollbar-thumb {
+            background: #4fc3f7;
+            border-radius: 3px;
+        }
+        
+        .controls h1 {
+            margin: 0 0 20px 0;
+            color: #4fc3f7;
+            font-size: 24px;
+            text-align: center;
+            text-shadow: 0 0 10px rgba(76, 195, 247, 0.5);
+        }
+        
+        .section {
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+        
+        .section h3 {
+            color: #81c784;
+            margin-bottom: 15px;
+            font-size: 16px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .control-group {
+            margin-bottom: 15px;
+        }
+        
+        .control-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: #e0e0e0;
+            font-weight: 500;
+        }
+        
+        .control-group input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.2);
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        
+        .control-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #4fc3f7;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(76, 195, 247, 0.5);
+        }
+        
+        .control-group input[type="color"] {
+            width: 100%;
+            height: 40px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            background: transparent;
+        }
+        
+        .control-group input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            accent-color: #4fc3f7;
+            cursor: pointer;
+        }
+        
+        .control-group input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            accent-color: #4fc3f7;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        
+        .control-group input[type="text"], .control-group select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+        
+        .control-group input[type="text"]:focus, .control-group select:focus {
+            border-color: #4fc3f7;
+            box-shadow: 0 0 10px rgba(76, 195, 247, 0.3);
+        }
+        
+        .control-group button {
+            background: linear-gradient(135deg, #4fc3f7, #29b6f6);
+            color: #000;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            width: 100%;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(76, 195, 247, 0.3);
+        }
+        
+        .control-group button:hover {
+            background: linear-gradient(135deg, #29b6f6, #1976d2);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(76, 195, 247, 0.4);
+        }
+        
+        .control-group button:active {
+            transform: translateY(0);
+        }
+        
+        .value-display {
+            display: inline-block;
+            background: rgba(76, 195, 247, 0.2);
+            color: #4fc3f7;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        
+        .info {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(76, 195, 247, 0.3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            font-size: 13px;
+            line-height: 1.6;
+        }
+        
+        .info .title {
+            color: #4fc3f7;
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px rgba(76, 195, 247, 0.5);
+        }
+        
+        .info .subtitle {
+            color: #81c784;
+            font-size: 12px;
+            margin-bottom: 15px;
+            opacity: 0.8;
+        }
+        
+        .info .controls-list {
+            list-style: none;
+        }
+        
+        .info .controls-list li {
+            margin-bottom: 5px;
+            color: #e0e0e0;
+        }
+        
+        .info .controls-list li strong {
+            color: #4fc3f7;
+        }
+        
+        .preset-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .preset-btn {
+            background: linear-gradient(135deg, #81c784, #66bb6a) !important;
+            padding: 8px 12px !important;
+            font-size: 12px !important;
+        }
+        
+        .preset-btn:hover {
+            background: linear-gradient(135deg, #66bb6a, #4caf50) !important;
+        }
+        
+        .error-message {
+            background: rgba(244, 67, 54, 0.1);
+            border: 1px solid rgba(244, 67, 54, 0.3);
+            color: #f44336;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-size: 12px;
+        }
+        
+        .success-message {
+            background: rgba(76, 175, 80, 0.1);
+            border: 1px solid rgba(76, 175, 80, 0.3);
+            color: #4caf50;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-size: 12px;
+        }
+        
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        
+        @media (max-width: 768px) {
+            .controls {
+                width: calc(100vw - 40px);
+                max-height: 60vh;
+            }
+            
+            .info {
+                position: static;
+                margin: 20px;
+                margin-top: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    
+    <button id="togglePanel" class="toggle-panel panel-visible" title="Toggle Control Panel">⚙️</button>
+    
+    <div id="controls" class="controls">
+        <h2>Particle Weaver</h2>
+        
+        <div class="control-group">
+            <label>Shape:</label>
+            <select id="shape-select">
+                <option value="sphere">Sphere</option>
+                <option value="cube">Cube</option>
+                <option value="torus">Torus</option>
+            </select>
+        </div>
+        
+        <div class="control-group">
+            <label>Particle Count:</label>
+            <input type="range" id="count-slider" min="500" max="10000" value="2000">
+            <span id="count-value">2000</span>
+        </div>
+        
+        <div class="control-group">
+            <label>Radius:</label>
+            <input type="range" id="radius-slider" min="0.5" max="10" step="0.1" value="3">
+            <span id="radius-value">3.0</span>
+        </div>
+        
+        <div class="control-group">
+            <label>Particle Size:</label>
+            <input type="range" id="size-slider" min="0.1" max="5" step="0.1" value="1">
+            <span id="size-value">1.0</span>
+        </div>
+        
+        <div class="control-group">
+            <label>Opacity:</label>
+            <input type="range" id="opacity-slider" min="0" max="1" step="0.01" value="0.8">
+            <span id="opacity-value">0.8</span>
+        </div>
+        
+        <div class="control-group">
+            <label>Size Variation:</label>
+            <input type="range" id="size-var-slider" min="0" max="1" step="0.01" value="0.2">
+            <span id="size-var-value">0.2</span>
+        </div>
+        
+        <div class="control-group">
+            <label>Particle Shape:</label>
+            <select id="particle-shape-select">
+                <option value="soft">Soft (Blurred)</option>
+                <option value="sharp">Sharp (Clean circles)</option>
+                <option value="square">Square (Pixels)</option>
+            </select>
+        </div>
+        
+        <div class="control-group">
+            <label>Scale:</label>
+            <input type="range" id="scale-slider" min="0.1" max="3" step="0.1" value="1">
+            <span id="scale-value">1.0</span>
+        </div>
+        
+        <div class="control-group">
+            <label>Color:</label>
+            <input type="color" id="color-picker" value="#ffffff">
+        </div>
+        
+        <div class="control-group">
+            <label>Animation: <span class="value-display" id="animated-value">On</span></label>
+            <input type="checkbox" id="animated-checkbox" checked>
+        </div>
+        
+        <div class="control-group">
+            <label>Animation Speed: <span class="value-display" id="anim-speed-value">1.0</span></label>
+            <input type="range" id="anim-speed-slider" min="0.1" max="3" step="0.1" value="1">
+        </div>
+        
+        <div class="control-group">
+            <label>Float Range: <span class="value-display" id="anim-radius-value">0.1</span></label>
+            <input type="range" id="anim-radius-slider" min="0" max="0.5" step="0.01" value="0.1">
+        </div>
+        
+        <div class="control-group">
+            <label>Connections: <span class="value-display" id="connected-value">Off</span></label>
+            <input type="checkbox" id="connected-checkbox">
+        </div>
+        
+        <div class="control-group">
+            <label>Connection Distance: <span class="value-display" id="conn-dist-value">1.0</span></label>
+            <input type="range" id="conn-dist-slider" min="0.5" max="3" step="0.1" value="1">
+        </div>
+        
+        <div class="control-group">
+            <label>Connection Color:</label>
+            <input type="color" id="connection-color-picker" value="#4fc3f7">
+        </div>
+        
+        <div class="control-group">
+            <label>Interactive: <span class="value-display" id="interactive-value">On</span></label>
+            <input type="checkbox" id="interactive-checkbox" checked>
+        </div>
+        
+        <div class="control-group">
+            <label>Mouse Influence: <span class="value-display" id="mouse-influence-value">1.0</span></label>
+            <input type="range" id="mouse-influence-slider" min="0" max="3" step="0.1" value="1">
+        </div>
+        
+        <div class="control-group">
+            <button id="regenerate-btn">🔄 Regenerate Particles</button>
+            <button id="reset-camera-btn">📷 Reset Camera</button>
+        </div>
+        
+        <div class="control-group">
+            <label>Model URL (glTF/GLB):</label>
+            <input type="text" id="model-url" placeholder="Enter model URL...">
+            <button id="load-model-btn">📥 Load Model</button>
+        </div>
+        
+        <div id="message-area"></div>
+    </div>
+    
+    <div class="info">
+        <div><strong>Particle Weaver v0.1.0</strong></div>
+        <div>A powerful library for particle clouds</div>
+        <div>Mouse: Rotate camera</div>
+        <div>Scroll: Zoom</div>
+    </div>
+
+    <script type="module">
+        import * as THREE from 'three'
+        import { ParticleWeaver } from './src/index.ts'
+        
+        // Global variables
+        let weaver = null
+        let isLoading = false
+        
+        // Get DOM elements
+        const container = document.getElementById('canvas-container')
+        const shapeSelect = document.getElementById('shape-select')
+        const countSlider = document.getElementById('count-slider')
+        const countValue = document.getElementById('count-value')
+        const radiusSlider = document.getElementById('radius-slider')
+        const radiusValue = document.getElementById('radius-value')
+        const sizeSlider = document.getElementById('size-slider')
+        const sizeValue = document.getElementById('size-value')
+        const opacitySlider = document.getElementById('opacity-slider')
+        const opacityValue = document.getElementById('opacity-value')
+        const sizeVarSlider = document.getElementById('size-var-slider')
+        const sizeVarValue = document.getElementById('size-var-value')
+        const particleShapeSelect = document.getElementById('particle-shape-select')
+        const colorPicker = document.getElementById('color-picker')
+        const regenerateBtn = document.getElementById('regenerate-btn')
+        const resetCameraBtn = document.getElementById('reset-camera-btn')
+        const modelUrl = document.getElementById('model-url')
+        const scaleSlider = document.getElementById('scale-slider')
+        const scaleValue = document.getElementById('scale-value')
+        const loadModelBtn = document.getElementById('load-model-btn')
+        const messageArea = document.getElementById('message-area')
+        
+        // New animation and interaction controls
+        const animatedCheckbox = document.getElementById('animated-checkbox')
+        const animatedValue = document.getElementById('animated-value')
+        const animSpeedSlider = document.getElementById('anim-speed-slider')
+        const animSpeedValue = document.getElementById('anim-speed-value')
+        const animRadiusSlider = document.getElementById('anim-radius-slider')
+        const animRadiusValue = document.getElementById('anim-radius-value')
+        const connectedCheckbox = document.getElementById('connected-checkbox')
+        const connectedValue = document.getElementById('connected-value')
+        const connDistSlider = document.getElementById('conn-dist-slider')
+        const connDistValue = document.getElementById('conn-dist-value')
+        const connectionColorPicker = document.getElementById('connection-color-picker')
+        const interactiveCheckbox = document.getElementById('interactive-checkbox')
+        const interactiveValue = document.getElementById('interactive-value')
+        const mouseInfluenceSlider = document.getElementById('mouse-influence-slider')
+        const mouseInfluenceValue = document.getElementById('mouse-influence-value')
+        
+        // Utility functions
+        function showMessage(text, type = 'info') {
+            messageArea.innerHTML = `<div class="${type === 'error' ? 'error-message' : 'success-message'}">${text}</div>`
+            setTimeout(() => {
+                messageArea.innerHTML = ''
+            }, 5000)
+        }
+        
+        function setLoading(loading) {
+            isLoading = loading
+            document.body.classList.toggle('loading', loading)
+            loadModelBtn.textContent = loading ? '⏳ Loading...' : '📥 Load Model'
+            regenerateBtn.textContent = loading ? '⏳ Generating...' : '🔄 Regenerate Particles'
+        }
+        
+        // Initialize particle weaver
+        function initParticleWeaver() {
+            if (isLoading) return
+            
+            setLoading(true)
+            
+            try {
+                if (weaver) {
+                    weaver.dispose()
+                }
+                
+                const options = {
+                    target: container,
+                    shape: {
+                        type: shapeSelect.value,
+                        count: parseInt(countSlider.value),
+                        params: {
+                            radius: parseFloat(radiusSlider.value)
+                        }
+                    },
+                    particle: {
+                        size: parseFloat(sizeSlider.value),
+                        color: colorPicker.value,
+                        opacity: parseFloat(opacitySlider.value),
+                        sizeVariation: parseFloat(sizeVarSlider.value),
+                        particleShape: particleShapeSelect.value,
+                        animated: animatedCheckbox.checked,
+                        animationSpeed: parseFloat(animSpeedSlider.value),
+                        animationRadius: parseFloat(animRadiusSlider.value),
+                        connected: connectedCheckbox.checked,
+                        connectionDistance: parseFloat(connDistSlider.value),
+                        connectionOpacity: 0.3,
+                        connectionColor: connectionColorPicker.value,
+                        interactive: interactiveCheckbox.checked,
+                        mouseInfluence: parseFloat(mouseInfluenceSlider.value),
+                        mouseRadius: 2.0
+                    },
+                    camera: {
+                        position: new THREE.Vector3(0, 0, 8)
+                    },
+                    renderer: {
+                        backgroundColor: 0x0a0a0f,
+                        antialias: true
+                    }
+                }
+                
+                weaver = new ParticleWeaver(options)
+                setupCameraControls()
+                showMessage(`Generated ${options.shape.count} particles successfully!`, 'success')
+                
+            } catch (error) {
+                console.error('Failed to initialize ParticleWeaver:', error)
+                showMessage(`Error: ${error.message}`, 'error')
+            } finally {
+                setLoading(false)
+            }
+        }
+        
+        // Load model from URL
+        async function loadModel() {
+            const url = modelUrl.value.trim()
+            if (!url) {
+                showMessage('Please enter a valid model URL', 'error')
+                return
+            }
+            
+            if (isLoading) return
+            setLoading(true)
+            
+            try {
+                if (weaver) {
+                    weaver.dispose()
+                }
+                
+                const options = {
+                    target: container,
+                    model: {
+                        url: url,
+                        scale: parseFloat(scaleSlider.value)
+                    },
+                    particle: {
+                        size: parseFloat(sizeSlider.value),
+                        color: colorPicker.value,
+                        opacity: parseFloat(opacitySlider.value),
+                        sizeVariation: parseFloat(sizeVarSlider.value),
+                        particleShape: particleShapeSelect.value,
+                        animated: animatedCheckbox.checked,
+                        animationSpeed: parseFloat(animSpeedSlider.value),
+                        animationRadius: parseFloat(animRadiusSlider.value),
+                        connected: connectedCheckbox.checked,
+                        connectionDistance: parseFloat(connDistSlider.value),
+                        connectionOpacity: 0.3,
+                        connectionColor: connectionColorPicker.value,
+                        interactive: interactiveCheckbox.checked,
+                        mouseInfluence: parseFloat(mouseInfluenceSlider.value),
+                        mouseRadius: 2.0
+                    },
+                    camera: {
+                        position: new THREE.Vector3(0, 0, 8)
+                    },
+                    renderer: {
+                        backgroundColor: 0x0a0a0f,
+                        antialias: true
+                    }
+                }
+                
+                weaver = new ParticleWeaver(options)
+                setupCameraControls()
+                showMessage('Model loaded successfully!', 'success')
+                
+            } catch (error) {
+                console.error('Failed to load model:', error)
+                showMessage(`Failed to load model: ${error.message}`, 'error')
+            } finally {
+                setLoading(false)
+            }
+        }
+        
+        // Setup camera controls
+        function setupCameraControls() {
+            if (!weaver) return
+            
+            const camera = weaver.getCamera()
+            const canvas = weaver.getRenderer().domElement
+            
+            let isMouseDown = false
+            let mouseX = 0
+            let mouseY = 0
+            let initialCameraPosition = camera.position.clone()
+            
+            // Mouse controls
+            canvas.addEventListener('mousedown', (e) => {
+                isMouseDown = true
+                mouseX = e.clientX
+                mouseY = e.clientY
+                canvas.style.cursor = 'grabbing'
+            })
+            
+            canvas.addEventListener('mousemove', (e) => {
+                if (!isMouseDown) return
+                
+                const deltaX = e.clientX - mouseX
+                const deltaY = e.clientY - mouseY
+                
+                const spherical = new THREE.Spherical()
+                spherical.setFromVector3(camera.position)
+                spherical.theta -= deltaX * 0.01
+                spherical.phi += deltaY * 0.01
+                spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi))
+                
+                camera.position.setFromSpherical(spherical)
+                camera.lookAt(0, 0, 0)
+                
+                mouseX = e.clientX
+                mouseY = e.clientY
+            })
+            
+            canvas.addEventListener('mouseup', () => {
+                isMouseDown = false
+                canvas.style.cursor = 'grab'
+            })
+            
+            canvas.addEventListener('mouseleave', () => {
+                isMouseDown = false
+                canvas.style.cursor = 'grab'
+            })
+            
+            // Wheel zoom
+            canvas.addEventListener('wheel', (e) => {
+                e.preventDefault()
+                const distance = camera.position.length()
+                const newDistance = Math.max(2, Math.min(50, distance + e.deltaY * 0.01))
+                camera.position.normalize().multiplyScalar(newDistance)
+            })
+            
+            // Reset camera function
+            window.resetCamera = () => {
+                camera.position.copy(initialCameraPosition)
+                camera.lookAt(0, 0, 0)
+            }
+        }
+        
+        // Preset configurations
+        window.loadPreset = (preset) => {
+            switch (preset) {
+                case 'small':
+                    countSlider.value = 1000
+                    radiusSlider.value = 1.5
+                    sizeSlider.value = 0.8
+                    particleShapeSelect.value = 'sharp'
+                    animatedCheckbox.checked = true
+                    connectedCheckbox.checked = false
+                    connectionColorPicker.value = '#4fc3f7'
+                    break
+                case 'large':
+                    countSlider.value = 8000
+                    radiusSlider.value = 3
+                    sizeSlider.value = 1.2
+                    particleShapeSelect.value = 'soft'
+                    animatedCheckbox.checked = true
+                    connectedCheckbox.checked = true
+                    connectionColorPicker.value = '#ff6b6b'
+                    break
+                case 'dense':
+                    countSlider.value = 15000
+                    radiusSlider.value = 2
+                    sizeSlider.value = 0.5
+                    particleShapeSelect.value = 'sharp'
+                    animatedCheckbox.checked = true
+                    connectedCheckbox.checked = true
+                    connDistSlider.value = 0.8
+                    connectionColorPicker.value = '#4ecdc4'
+                    break
+                case 'sparse':
+                    countSlider.value = 500
+                    radiusSlider.value = 4
+                    sizeSlider.value = 2
+                    particleShapeSelect.value = 'square'
+                    animatedCheckbox.checked = true
+                    connectedCheckbox.checked = false
+                    connectionColorPicker.value = '#ffe66d'
+                    break
+            }
+            updateValues()
+            initParticleWeaver()
+        }
+        
+        // Sample model loader
+        window.loadSampleModel = (model) => {
+            const models = {
+                suzanne: 'https://threejs.org/examples/models/gltf/Suzanne/Suzanne.gltf',
+                teapot: 'https://threejs.org/examples/models/gltf/Teapot/Teapot.gltf'
+            }
+            
+            if (models[model]) {
+                modelUrl.value = models[model]
+                loadModel()
+            }
+        }
+        
+        // Update value displays
+        function updateValues() {
+            countValue.textContent = countSlider.value
+            radiusValue.textContent = parseFloat(radiusSlider.value).toFixed(1)
+            sizeValue.textContent = parseFloat(sizeSlider.value).toFixed(1)
+            opacityValue.textContent = parseFloat(opacitySlider.value).toFixed(1)
+            sizeVarValue.textContent = parseFloat(sizeVarSlider.value).toFixed(1)
+            scaleValue.textContent = parseFloat(scaleSlider.value).toFixed(1)
+            
+            // Update new control values
+            animatedValue.textContent = animatedCheckbox.checked ? 'On' : 'Off'
+            animSpeedValue.textContent = parseFloat(animSpeedSlider.value).toFixed(1)
+            animRadiusValue.textContent = parseFloat(animRadiusSlider.value).toFixed(2)
+            connectedValue.textContent = connectedCheckbox.checked ? 'On' : 'Off'
+            connDistValue.textContent = parseFloat(connDistSlider.value).toFixed(1)
+            interactiveValue.textContent = interactiveCheckbox.checked ? 'On' : 'Off'
+            mouseInfluenceValue.textContent = parseFloat(mouseInfluenceSlider.value).toFixed(1)
+        }
+        
+        // Event listeners
+        countSlider.addEventListener('input', updateValues)
+        radiusSlider.addEventListener('input', updateValues)
+        sizeSlider.addEventListener('input', updateValues)
+        opacitySlider.addEventListener('input', updateValues)
+        sizeVarSlider.addEventListener('input', updateValues)
+        particleShapeSelect.addEventListener('change', updateValues)
+        connectionColorPicker.addEventListener('change', updateValues)
+        scaleSlider.addEventListener('input', updateValues)
+        
+        // New control listeners
+        animatedCheckbox.addEventListener('change', updateValues)
+        animSpeedSlider.addEventListener('input', updateValues)
+        animRadiusSlider.addEventListener('input', updateValues)
+        connectedCheckbox.addEventListener('change', updateValues)
+        connDistSlider.addEventListener('input', updateValues)
+        interactiveCheckbox.addEventListener('change', updateValues)
+        mouseInfluenceSlider.addEventListener('input', updateValues)
+        
+        regenerateBtn.addEventListener('click', initParticleWeaver)
+        resetCameraBtn.addEventListener('click', () => window.resetCamera && window.resetCamera())
+        loadModelBtn.addEventListener('click', loadModel)
+        
+        // Panel toggle functionality
+        const togglePanel = document.getElementById('togglePanel')
+        const controls = document.getElementById('controls')
+        
+        togglePanel.addEventListener('click', () => {
+            const isHidden = controls.classList.contains('hidden')
+            
+            if (isHidden) {
+                // Show panel
+                controls.classList.remove('hidden')
+                togglePanel.classList.add('panel-visible')
+                togglePanel.style.transform = 'translateX(0)'
+            } else {
+                // Hide panel
+                controls.classList.add('hidden')
+                togglePanel.classList.remove('panel-visible')
+                togglePanel.style.transform = 'translateX(0)'
+            }
+        })
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            switch (e.code) {
+                case 'Space':
+                    e.preventDefault()
+                    window.resetCamera && window.resetCamera()
+                    break
+                case 'KeyR':
+                    if (!e.ctrlKey && !e.metaKey) {
+                        e.preventDefault()
+                        initParticleWeaver()
+                    }
+                    break
+                case 'KeyP':
+                    if (!e.ctrlKey && !e.metaKey) {
+                        e.preventDefault()
+                        // Toggle panel with 'P' key
+                        togglePanel.click()
+                    }
+                    break
+            }
+        })
+        
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            if (weaver) {
+                // ParticleWeaver handles resize internally
+            }
+        })
+        
+        // Initialize on page load
+        updateValues()
+        initParticleWeaver()
+        
+        console.log('🌟 Particle Weaver Demo loaded successfully!')
+        console.log('Available global functions: loadPreset(), loadSampleModel(), resetCamera()')
+        console.log('Keyboard shortcuts: Space (reset camera), R (regenerate), P (toggle panel)')
+    </script>
+</body>
+</html>
