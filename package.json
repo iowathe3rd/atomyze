@@ -45,7 +45,7 @@
     "access": "public"
   },
   "dependencies": {
-    "three": "^0.160.0"
+    "three": "^0.179.1"
   },
   "devDependencies": {
     "@semantic-release/changelog": "^6.0.3",
